@@ -5,6 +5,7 @@ using System.Linq;
 using Assets.Scripts.Containers;
 using Assets.Scripts.Tools;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Assets.Scripts.Executors
 {
@@ -24,6 +25,12 @@ namespace Assets.Scripts.Executors
 
         private Corners _originCorners;
         private Corners _futereCorners;
+
+        private BezieControlPoints _r_cont_p; //right control points
+        private BezieControlPoints _l_cont_p;//left control points
+
+
+
         private DestinationPoints _desPoints;
 
         public float AnimationDuration;
@@ -58,48 +65,115 @@ namespace Assets.Scripts.Executors
             );
         }
 
-        private Tuple<Vector3[], Vector3[]> _armatureCurves;
+        private Tuple<Vector3[], Vector3[]> _armatureCurves;// main trajectory armature
+        private Tuple<Vector3[], Vector3[]> _subArmetureCurve;// traectory if bottom original corners cross by Y with bezie curve
+
+
+
 
         private void CreateArmatureCurves()
         {
-            var p0_l = _futereCorners.TopLeftPoint;
-            var p1_l = new Vector3(_futereCorners.TopLeftPoint.x, _futereCorners.BotLeftPoint.y);
-            var p2_l = new Vector3(_futereCorners.BotLeftPoint.x, _futereCorners.TopLeftPoint.y);
-            var p3_l = _futereCorners.BotLeftPoint;
 
-            var leftCurve = MyMath.GetBezieCurve(height, p0_l, p1_l, p2_l, p3_l);
+            var leftCurve = MyMath.GetBezieCurve(height,
+                _l_cont_p.p0,
+                _l_cont_p.p1,
+                _l_cont_p.p2,
+                _l_cont_p.p3);
 
-            var p0_r = _futereCorners.TopRightPoint;
-            var p1_r = new Vector3(_futereCorners.TopRightPoint.x, _futereCorners.BotRightPoint.y);
-            var p2_r = new Vector3(_futereCorners.BotRightPoint.x, _futereCorners.TopRightPoint.y);
-            var p3_r = _futereCorners.BotRightPoint;
-
-            var rightCurve = MyMath.GetBezieCurve(height, p0_r, p1_r, p2_r, p3_r);
+            var rightCurve = MyMath.GetBezieCurve(height,
+                _r_cont_p.p0,
+                _r_cont_p.p1,
+                _r_cont_p.p2,
+                _r_cont_p.p3);
 
             _armatureCurves = new Tuple<Vector3[], Vector3[]>(leftCurve, rightCurve);
         }
 
+        private void InitControlPoints()
+        {
+            _l_cont_p.p0 = _futereCorners.TopLeftPoint;
+            _l_cont_p.p1 = new Vector3(_futereCorners.TopLeftPoint.x, _futereCorners.BotLeftPoint.y);
+            _l_cont_p.p2 = new Vector3(_futereCorners.BotLeftPoint.x, _futereCorners.TopLeftPoint.y);
+            _l_cont_p.p3 = _futereCorners.BotLeftPoint;
+
+            _r_cont_p.p0 = _futereCorners.TopRightPoint;
+            _r_cont_p.p1 = new Vector3(_futereCorners.TopRightPoint.x, _futereCorners.BotRightPoint.y);
+            _r_cont_p.p2 = new Vector3(_futereCorners.BotRightPoint.x, _futereCorners.TopRightPoint.y);
+            _r_cont_p.p3 = _futereCorners.BotRightPoint;
+        }
+
+        private void CreateSubArmatureCurves(int segmentsCount)
+        {
+            var leftCurve = MyMath.GetSubBezieCurve(height, segmentsCount,
+                _l_cont_p.p0,
+                _l_cont_p.p1,
+                _l_cont_p.p2,
+                _l_cont_p.p3);
+
+            var rightCurve = MyMath.GetSubBezieCurve(height, segmentsCount,
+                _r_cont_p.p0,
+                _r_cont_p.p1,
+                _r_cont_p.p2,
+                _r_cont_p.p3);
+
+            _subArmetureCurve = new Tuple<Vector3[], Vector3[]>(leftCurve, rightCurve);
+        }
+
+        private int GetSubCurveBeziePointsCount()
+        {
+            float relativeSubCurveLength = _indexOfCrossPointInBezieCurve / (float)(_armatureCurves.Item1.Length - 1);
+            int pointsCount = (int)(height / relativeSubCurveLength);
+            return pointsCount;
+        }
+
+
+
         private Vector3[] _futurePoints;
 
-        private void FillBetweenCurves()
-        {
-            var leftCurv = _armatureCurves.Item1;
-            var rightCurv = _armatureCurves.Item2;
+        private Vector3[] _futureSubPoints;
 
+        private void OnDrawGizmos()
+        {
+            if (!Application.isPlaying) return;
+            //Gizmos.color = Color.black;
+            foreach (var p in _armatureCurves.Item1)
+            {
+                Gizmos.DrawSphere(p, 0.5f);
+            }
+
+            foreach (var p in _armatureCurves.Item2)
+            {
+                Gizmos.DrawSphere(p, 0.5f);
+            }
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(_originCorners.BotLeftPoint, 1f);
+
+
+            foreach (var p in _futureSubPoints)
+            {
+                Gizmos.DrawSphere(p, 0.1f);
+            }
+
+
+        }
+
+        private void FillBetweenCurves(Vector3[] leftCurv, Vector3[] rightCurv, out Vector3[] futurePoints)
+        {
             var rowIndex = 0;
-            _futurePoints = new Vector3[width * height];
+            futurePoints = new Vector3[width * height];
 
             for (int i = 0; i < height; i++)
             {
                 rowIndex = i * width;
 
-                var distanceBtwLeftAndRight = Vector3.Distance(leftCurv[i], rightCurv[i]);
-                float stepLength = distanceBtwLeftAndRight / width;
+                float distanceBtwLeftAndRight = Vector3.Distance(leftCurv[i], rightCurv[i]);
+                float stepLength = distanceBtwLeftAndRight / (width - 1);
 
                 for (int j = 0; j < width; j++)
                 {
                     var step = j * stepLength;
-                    _futurePoints[rowIndex + j] = new Vector3(leftCurv[i].x + step, leftCurv[i].y, leftCurv[i].z);
+                    futurePoints[rowIndex + j] = new Vector3(leftCurv[i].x + step, leftCurv[i].y, leftCurv[i].z);
                 }
             }
         }
@@ -117,7 +191,7 @@ namespace Assets.Scripts.Executors
             }
         }
 
-        IEnumerator MoveVertecies(float time)
+        IEnumerator MoveVertecies(float time, Vector3[] _futurePints)
         {
             var originalVertecies = _mf.mesh.vertices;
             var newVertArr = new Vector3[width * height];
@@ -130,7 +204,7 @@ namespace Assets.Scripts.Executors
 
                 for (int i = 0; i < width * height; i++)
                 {
-                    newVertArr[i] = Vector3.Lerp(originalVertecies[i], _futurePoints[i], 1 - cacheTime / time);
+                    newVertArr[i] = Vector3.Lerp(originalVertecies[i], _futurePints[i], 1 - cacheTime / time);
                 }
                 ApplyVertex(newVertArr);
             }
@@ -155,15 +229,32 @@ namespace Assets.Scripts.Executors
             }
         }
 
+        private int _indexOfCrossPointInBezieCurve;
+        private bool CheckCrossYTheCurve(float crossPointY)//Check if bottom left or bottom right original points cross the Y bezie curve and get point 
+        {
+            var _beziePoints = _armatureCurves.Item1;
+            for (int i = 0; i < _beziePoints.Length; i++)//no metter what curve it exactly is 
+            {
+                if (i + 1 > _beziePoints.Length - 1) break;
+                if ((_beziePoints[i].y >= crossPointY && _beziePoints[i + 1].y <= crossPointY) ||
+                    (_beziePoints[i].y <= crossPointY && _beziePoints[i + 1].y >= crossPointY))
+                {
+                    _indexOfCrossPointInBezieCurve = i;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         IEnumerator StartAnimation(float time)
         {
             while (true)
             {
-                StartCoroutine(MoveVertecies(time));
+                StartCoroutine(MoveVertecies(time, _futureSubPoints));
                 yield return new WaitForSeconds(time);
 
-                StartCoroutine(MoveVerteciesInverse(time));
-                yield return new WaitForSeconds(time);
+                //StartCoroutine(MoveVerteciesInverse(time));
+                //yield return new WaitForSeconds(time);
             }
         }
 
@@ -181,9 +272,20 @@ namespace Assets.Scripts.Executors
             InitCorners();
             InitDestenationPonts();
             InitFutureCorners();
+            InitControlPoints();
             CreateArmatureCurves();
-            FillBetweenCurves();
-            StartCoroutine(StartAnimation(AnimationDuration));
+
+            if (CheckCrossYTheCurve(_originCorners.BotLeftPoint.y))
+            {
+                CreateSubArmatureCurves(GetSubCurveBeziePointsCount());
+                FillBetweenCurves(_subArmetureCurve.Item1, _subArmetureCurve.Item2, out _futureSubPoints);
+                StartCoroutine(StartAnimation(AnimationDuration));
+            }
+            else
+            {
+
+            }
+            //FillBetweenCurves();
         }
 
 

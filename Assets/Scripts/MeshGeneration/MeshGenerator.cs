@@ -8,7 +8,7 @@ public class MeshGenerator
     public static MeshData GenerateMeshSquare(int width, int height)
     {
         float topLeftX = (width - 1) / -2f;
-        float topLeftZ = (height - 1) / 2f;
+        float topLeftY = (height - 1) / 2f;
 
         MeshData meshData = new MeshData(width, height);
         int vertexIndex = 0;
@@ -17,7 +17,7 @@ public class MeshGenerator
         {
             for (int x = 0; x < width; x++)
             {
-                meshData.Vertecies[vertexIndex] = new Vector3(topLeftX + x, 0, topLeftZ - y);
+                meshData.Vertecies[vertexIndex] = new Vector3(topLeftX + x, topLeftY - y, 0);
                 meshData.Uvs[vertexIndex] = new Vector2(x / (float)width, y / (float)height);
                 if (x < width - 1 && y < height - 1)
                 {

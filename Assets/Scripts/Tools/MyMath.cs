@@ -10,7 +10,19 @@ namespace Assets.Scripts.Tools
 
             for (int i = 0; i < curve.Length; i++)
             {
-                float t = i / (float)segmentCount;
+                float t = i / (float)(segmentCount - 1);
+                curve[i] = CalculateBezierPoint(t, p0, p1, p2, p3);
+            }
+            return curve;
+        }
+
+        public static Vector3[] GetSubBezieCurve(int endPoint, int segmentCount, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
+        {
+            var curve = new Vector3[endPoint];
+
+            for (int i = 0; i < endPoint; i++)
+            {
+                float t = i / (float)(segmentCount - 1);
                 curve[i] = CalculateBezierPoint(t, p0, p1, p2, p3);
             }
             return curve;
