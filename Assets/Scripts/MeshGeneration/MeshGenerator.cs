@@ -18,7 +18,7 @@ public class MeshGenerator
             for (int x = 0; x < width; x++)
             {
                 meshData.Vertecies[vertexIndex] = new Vector3(topLeftX + x, topLeftY - y, 0);
-                meshData.Uvs[vertexIndex] = new Vector2(x / (float)width, y / (float)height);
+                meshData.Uvs[vertexIndex] = new Vector2(x / ((float)width - 1), y / ((float)height - 1));
                 if (x < width - 1 && y < height - 1)
                 {
                     meshData.AddTriangles(vertexIndex, vertexIndex + width + 1, vertexIndex + width);

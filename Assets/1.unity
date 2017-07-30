@@ -368,11 +368,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 49e02c4ec7aaf074bbe39dedf4ab5891, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 10
-  height: 75
+  Mat: {fileID: 2100000, guid: 892b14f464980764da7496114bb1c98b, type: 2}
+  width: 30
+  height: 30
   DestLeft: {fileID: 1091746428}
   DestRight: {fileID: 353116699}
-  AnimationDuration: 5
+  AnimationDuration: 3
 --- !u!4 &1108520948
 Transform:
   m_ObjectHideFlags: 0
@@ -481,7 +482,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 113
+  orthographic size: 33.39
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2

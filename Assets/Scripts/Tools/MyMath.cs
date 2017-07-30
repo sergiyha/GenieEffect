@@ -28,6 +28,19 @@ namespace Assets.Scripts.Tools
             return curve;
         }
 
+        public static Vector3[] GetInverseSubBezieCurve(int neededcount, int segmentCount, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
+        {
+            var curve = new Vector3[neededcount];
+
+            for (int i = 0; i < neededcount; i++)
+            {
+                int p = segmentCount - neededcount + i;
+                float t = p / (float)(segmentCount - 1);
+                curve[i] = CalculateBezierPoint(t, p0, p1, p2, p3);
+            }
+            return curve;
+        }
+
 
         public static Vector3 CalculateBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
         {
